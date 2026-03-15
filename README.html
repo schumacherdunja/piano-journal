@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piano Journal — User Guide</title>
+<style>
+  body{font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 24px 80px;background:#fff;color:#1a1a1a;line-height:1.7;}
+  h1{font-size:28px;color:#1a1a1a;border-bottom:2px solid #c9a96e;padding-bottom:10px;margin-bottom:6px;}
+  h2{font-size:20px;color:#1a1a1a;margin-top:36px;margin-bottom:6px;border-left:4px solid #c9a96e;padding-left:12px;}
+  h3{font-size:16px;color:#3a3a3a;margin-top:22px;margin-bottom:4px;}
+  p{margin:8px 0 12px;}
+  ul,ol{margin:6px 0 12px;padding-left:24px;}
+  li{margin-bottom:5px;}
+  code{background:#f4f0e8;border-radius:3px;padding:1px 5px;font-family:monospace;font-size:14px;}
+  .chip{display:inline-block;border-radius:4px;padding:1px 7px;font-size:12px;margin-right:4px;font-family:Georgia,serif;}
+  .chip-hard{background:#f9e0e0;border:1px solid #d96060;color:#b04040;}
+  .chip-med{background:#fef3e0;border:1px solid #e8a838;color:#a07010;}
+  .chip-easy{background:#e0f4e6;border:1px solid #56b870;color:#2a7a40;}
+  .chip-gold{background:#fef6e8;border:1px solid #c9a96e;color:#8a6820;}
+  table{border-collapse:collapse;width:100%;margin:12px 0 18px;}
+  th{background:#f4f0e8;padding:8px 12px;text-align:left;font-size:13px;border:1px solid #ddd;}
+  td{padding:7px 12px;border:1px solid #e8e8e8;font-size:14px;vertical-align:top;}
+  tr:nth-child(even) td{background:#fafafa;}
+  .note{background:#fef6e8;border-left:4px solid #c9a96e;padding:10px 14px;border-radius:0 6px 6px 0;margin:14px 0;font-size:14px;}
+  .subtitle{color:#7a6840;font-style:italic;margin-top:0;font-size:15px;}
+  hr{border:none;border-top:1px solid #e8e8e8;margin:32px 0;}
+</style>
+</head>
+<body>
+
+<h1>🎹 Piano Journal</h1>
+<p class="subtitle">A mobile-first practice tracker for serious piano students — no account, no server, all data stays on your device.</p>
+
+<hr>
+
+<h2>What it is</h2>
+<p>Piano Journal is a two-file web app that lives on your phone's home screen. It helps you track practice sessions, manage repertoire, follow the Gebrian spaced repetition method, and monitor BPM progress over time. A companion Stats file gives deeper analysis.</p>
+<p>Everything is stored in your browser's local storage — nothing is sent anywhere. Your data belongs to you.</p>
+
+<h2>Getting started</h2>
+
+<h3>Installing on iPhone</h3>
+<ol>
+  <li>Open the tracker URL in <strong>Safari</strong> (not Chrome)</li>
+  <li>Tap the Share button at the bottom of the screen</li>
+  <li>Tap <strong>Add to Home Screen</strong></li>
+  <li>Tap Add — it appears as an app icon</li>
+  <li>Repeat for the Stats link if you want that as a separate icon</li>
+</ol>
+
+<h3>Installing on Android</h3>
+<ol>
+  <li>Open the URL in <strong>Chrome</strong></li>
+  <li>Tap the three-dot menu → <strong>Add to Home Screen</strong></li>
+</ol>
+
+<h3>Installing on Mac / Windows</h3>
+<p>Open in Safari (Mac) or Chrome/Edge (Windows) and use the install option in the address bar or browser menu. It opens as a standalone window without browser chrome.</p>
+
+<div class="note">Both files must be accessed from the same web address for the Stats link to work. If you're using the GitHub Pages version, this is automatic.</div>
+
+<hr>
+
+<h2>The two files</h2>
+
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>piano-tracker-v2.html</code></td><td>Main tracker — pieces, practice, today view, session logging, Gebrian schedule, metronome, lesson log</td></tr>
+  <tr><td><code>piano-stats.html</code></td><td>Stats &amp; analysis — BPM progress charts, time per section, monthly calendar, performance plans, insight system</td></tr>
+</table>
+
+<hr>
+
+<h2>Core concepts</h2>
+
+<h3>Pieces and sections</h3>
+<p>Add each piece you're working on, then break it into sections (e.g. Exposition, Development, Coda). Within each section you can add sub-sections for finer granularity. Every level can have:</p>
+<ul>
+  <li>A <strong>Stage</strong> — Note Learning, Tempo Building, Memorisation, Interpretation, Mock Run-throughs, Peak &amp; Recovery</li>
+  <li>A <strong>Difficulty</strong> tag — <span class="chip chip-hard">Hard</span> <span class="chip chip-med">Med</span> <span class="chip chip-easy">Easy</span> — used by the insight system to calibrate what counts as a problem</li>
+  <li><strong>Working BPM</strong> — your current target tempo</li>
+  <li><strong>Performance BPM</strong> — the final target tempo</li>
+</ul>
+<p>Tap a section header to expand it and edit these fields. Changes save automatically. Sections stay open while you edit — tap the header again to collapse.</p>
+
+<h3>Logging a session</h3>
+<p>There are three ways to log:</p>
+<ol>
+  <li><strong>Practice rotation</strong> — set up slots, run the timer, fill in BPMs at the end</li>
+  <li><strong>♪ Log button</strong> on any section in the Pieces view</li>
+  <li><strong>Quick Log</strong> on the Today tab — piece/section dropdown, one tap</li>
+</ol>
+<p>Each log records date, duration, BPM range (start → end), note value, rating, and optional notes.</p>
+
+<hr>
+
+<h2>The Practice tab</h2>
+<p>This is the action hub. Before starting:</p>
+<ul>
+  <li>Add Gebrian due sections with <strong>+ Add</strong> (they appear at the top automatically)</li>
+  <li>Add any other sections manually using the Add Slot panel</li>
+  <li>Set minutes per slot and mode (Free or Clicking Up)</li>
+  <li>Set rest between slots and number of rounds</li>
+</ul>
+<p>Tap <strong>Start Rotation</strong> to begin. The clock counts down per slot with a progress ring. At the end, fill in BPMs for each slot and save.</p>
+
+<h3>Clicking Up (within practice)</h3>
+<p>For slots set to Clicking Up mode, tap the <em>Clicking Up</em> button during the slot. This runs Gebrian's interleaved method: anchor BPM → target BPM → increment → repeat, with an optional overshoot. Progress through steps with Next.</p>
+
+<h3>Clicking Up (standalone)</h3>
+<p>Access from the drawer menu → Clicking Up. Select a piece/section, set parameters, tap Begin Session. Log the result at the end.</p>
+
+<hr>
+
+<h2>The Today tab</h2>
+<p>A read-only dashboard showing:</p>
+<ul>
+  <li>Date, day name, practice streak, today's minutes, 7-day total</li>
+  <li>7-day dot calendar — green dot = practised, shows duration</li>
+  <li>Gebrian sections due today with inline ♪ Log buttons</li>
+  <li>Latest teacher focus reminder with lesson notes</li>
+  <li>Recent BPM movements (last session vs previous)</li>
+  <li>Quick Log dropdowns per piece for fast logging without going through Practice setup</li>
+</ul>
+
+<hr>
+
+<h2>The Gebrian schedule (Spaced Rep)</h2>
+<p>Based on Carlo Gebrian's memorisation method. Each section follows a 108-day, 30-session schedule:</p>
+<table>
+  <tr><th>Phase</th><th>Pattern</th></tr>
+  <tr><td>Phase 1</td><td>3 consecutive days</td></tr>
+  <tr><td>Phase 2</td><td>Every other day × 3 (days 4, 6, 8)</td></tr>
+  <tr><td>Phase 3</td><td>7 days rest, then 3 consecutive</td></tr>
+  <tr><td>Phase 4</td><td>10 days rest, then 3 consecutive</td></tr>
+  <tr><td>Cycles 5–10</td><td>10 days rest + 3 days each</td></tr>
+</table>
+<p>To start a schedule: go to Spaced Rep in the drawer, select a piece and section, tap Start Schedule Today. Due sections appear automatically in Today and Practice.</p>
+<p>Sessions are auto-ticked when you log a session for that section on a due date. Teacher focus sections are always shown in Practice regardless of schedule day. On Thursdays, teacher focus sections are injected into the Gebrian list even if not scheduled.</p>
+
+<hr>
+
+<h2>Lesson Log</h2>
+<p>Record each lesson with a date, notes, and the sections your teacher focused on. The most recent lesson's focus sections appear throughout the app marked with a 🎓 badge, and they sort to the top of your practice setup.</p>
+
+<hr>
+
+<h2>Stats &amp; Insights (piano-stats.html)</h2>
+<p>Open from the History tab (Stats button) or directly via bookmark. Four tabs:</p>
+
+<table>
+  <tr><th>Tab</th><th>What it shows</th></tr>
+  <tr><td>History</td><td>Session list with BPM tags, time-per-section chart by day/week/month, section comparison</td></tr>
+  <tr><td>Insights</td><td>Attention Needed analysis, minutes-per-section chart, monthly calendar, time-per-piece breakdown with BPM progress</td></tr>
+  <tr><td>BPM</td><td>BPM progress chart per section over time, with target tempo dashed line</td></tr>
+  <tr><td>Performance</td><td>Performance readiness plans — stage timeline, mock run-through log, post-Gebrian maintenance schedule</td></tr>
+</table>
+
+<h3>Insight System</h3>
+<p>The Insights tab analyses each section you have BPM data for and flags issues. Signals are weighted by difficulty — a plateau on a Hard section is normal; the same plateau on an Easy section is a flag.</p>
+
+<table>
+  <tr><th>Signal</th><th>What triggers it</th><th>Suggested action</th></tr>
+  <tr><td>Slow progress</td><td>BPM gains below threshold for hours practised</td><td>Shorter, more focused slots</td></tr>
+  <tr><td>Stalled / Plateau</td><td>Last 3 sessions within ±2 BPM</td><td>Rest day or drop BPM 20%</td></tr>
+  <tr><td>Poor retention</td><td>Losing &gt;5 BPM after gaps under 4 days</td><td>Practise more frequently</td></tr>
+  <tr><td>Retention risk</td><td>Losing &gt;8 BPM between sessions</td><td>Check Gebrian schedule is active</td></tr>
+  <tr><td>Fatigue pattern</td><td>Longer sessions consistently rated worse</td><td>Keep slots under 15 minutes</td></tr>
+  <tr><td>Near target</td><td>At 95%+ of performance BPM</td><td>Focus on quality, not speed</td></tr>
+</table>
+
+<hr>
+
+<h2>Metronome</h2>
+<p>Access from the drawer. Tap once to start/stop. Tap the BPM display to type a value directly. Use + / − buttons to nudge. The beat indicator pulses on each beat. Supports quarter, eighth, half, dotted quarter, dotted eighth, and sixteenth note values.</p>
+
+<hr>
+
+<h2>Performance Plans</h2>
+<p>In Stats → Performance, create a plan by selecting a piece and a performance date. The app calculates a stage timeline working backwards from the date:</p>
+<ul>
+  <li>Note Learning → Tempo Building → Memorisation → Interpretation → Mock Run-throughs → Peak &amp; Recovery</li>
+</ul>
+<p>Log mock run-throughs with a pressure rating and notes. After the performance, a maintenance schedule extends for 6 months with review checkpoints.</p>
+
+<hr>
+
+<h2>Backup and restore</h2>
+<p>Go to the drawer → Backup. Export saves all your data as a JSON file. Import restores it. Do this regularly — if you clear your browser data, your practice history is gone.</p>
+
+<div class="note"><strong>Important:</strong> Your data lives only on your device. It is not backed up to any server. Export regularly and keep the file somewhere safe.</div>
+
+<hr>
+
+<h2>Data shared between files</h2>
+<p>The tracker and stats file share data via browser localStorage using these keys:</p>
+<table>
+  <tr><th>Key</th><th>Contains</th></tr>
+  <tr><td><code>pj2-pieces</code></td><td>All pieces, sections, sub-sections, BPM targets, stages, difficulty tags</td></tr>
+  <tr><td><code>pj2-sessions</code></td><td>All practice sessions with BPM data, ratings, notes</td></tr>
+  <tr><td><code>pj2-sr</code></td><td>Gebrian schedules and tick history</td></tr>
+  <tr><td><code>pj2-perf</code></td><td>Performance plans and mock run logs</td></tr>
+  <tr><td><code>pj2-lessons</code></td><td>Lesson log entries and teacher focus sections</td></tr>
+</table>
+<p>Both files must be opened from the same origin (same website address) for this sharing to work.</p>
+
+<hr>
+
+<h2>Tips</h2>
+<ul>
+  <li>Name sections with a leading number (e.g. <em>1 - Exposition</em>) — they sort numerically throughout the app</li>
+  <li>Set a Performance BPM on each section — this unlocks the progress percentage in Stats</li>
+  <li>Tag sections with difficulty before starting — the insight system is calibrated from day one</li>
+  <li>The streak counter on Today only counts if you log at least one session that day</li>
+  <li>Teacher focus sections always sort to the top of Practice setup regardless of the Gebrian schedule</li>
+  <li>On Thursdays, teacher focus sections are automatically added to the practice list as a pre-lesson reminder</li>
+</ul>
+
+<hr>
+<p style="font-size:13px;color:#888;text-align:center;">Piano Journal &mdash; built for daily use on iOS, Android, Mac, and Windows</p>
+
+</body>
+</html>
