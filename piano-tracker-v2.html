@@ -5,12 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Piano Journal">
+<link rel="manifest" href="manifest.json">
 <title>Piano Journal</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#0a0a0e;--card:#13131d;--card2:#191926;--border:#22222e;
-  --gold:#c9a96e;--gold2:#e8c98a;--dim:#4a4860;--sub:#7a7898;--text:#e2ddf0;
+  --gold:#c9a96e;--gold2:#e8c98a;--dim:#9490aa;--sub:#b8b6cc;--text:#e2ddf0;
   --red:#d96060;--green:#56b870;--blue:#5b9bd5;--purple:#a07cd0;--amber:#e8a838;
   --fs:1;
   --fsxs:calc(9px * var(--fs));--fssm:calc(11px * var(--fs));
@@ -30,7 +32,7 @@ body{background:var(--bg);color:var(--text);font-family:Georgia,serif;min-height
 .pnav-lbl{font-size:calc(9px * var(--fs));letter-spacing:.08em;text-transform:uppercase;}
 /* Drawer */
 #drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);pointer-events:none;z-index:198;transition:background .25s;}
-#drawer{position:fixed;top:0;right:0;bottom:0;width:260px;background:var(--card);border-left:1px solid var(--border);z-index:199;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;}
+#drawer{position:fixed;top:0;right:max(0px,calc((100vw - 640px) / 2));bottom:0;width:260px;background:var(--card);border-left:1px solid var(--border);z-index:199;transform:translateX(100%);transition:transform .3s ease;display:flex;flex-direction:column;}
 #drawer-head{padding:20px 18px 14px;border-bottom:1px solid var(--border);font-size:var(--fsxl);color:var(--gold);font-style:italic;}
 #drawer-nav{flex:1;overflow-y:auto;padding:10px 0;}
 .nav-item{display:flex;align-items:center;gap:13px;padding:13px 18px;cursor:pointer;color:var(--sub);font-size:var(--fslg);border-left:3px solid transparent;transition:all .15s;}
@@ -572,92 +574,235 @@ function render(){
   if(curView==='practice' && prac.state==='clickup') cuRender();
 }
 
+function renderKeepOpen(){
+  var open=[];
+  document.querySelectorAll('.piece-body.open,.sec-body.open').forEach(function(el){
+    if(el.id) open.push(el.id);
+  });
+  render();
+  open.forEach(function(id){
+    var el=document.getElementById(id); if(el) el.classList.add('open');
+  });
+}
+
 // ── TODAY ─────────────────────────────────────────────────────────
 function vToday(){
   var t=today();
-  var h='<div class="card" style="border-color:#2a2040;margin-bottom:12px">'
-    +'<div style="font-size:var(--fsxs);color:var(--dim);letter-spacing:.15em;text-transform:uppercase">'+t+'</div>'
-    +'<div style="font-size:calc(22px * var(--fs));color:var(--gold);font-style:italic;margin-top:2px">Today</div>'
-    +'</div>';
+  var latestLesson=lessons&&lessons.length?lessons[0]:null;
+  var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var dayName=DAYS[new Date(t+'T12:00:00').getDay()];
 
-  // Due today
+  // ── Stats for header ──
+  var todayMins=sessions.filter(function(s){return s.date===t;}).reduce(function(a,s){return a+(s.duration||0);},0);
+  var weekAgo=addDays(t,-6);
+  var weekMins=sessions.filter(function(s){return s.date>=weekAgo&&s.date<=t;}).reduce(function(a,s){return a+(s.duration||0);},0);
+  // Day streak
+  var streak=0; var d=t;
+  while(true){
+    var hasPrac=sessions.some(function(s){return s.date===d;});
+    if(!hasPrac) break;
+    streak++; d=addDays(d,-1);
+  }
+
+  // ── Header ──
+  var h='<div class="card" style="background:linear-gradient(135deg,#13131d 0%,#1a1530 100%);border-color:#2a2040;margin-bottom:12px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+    +'<div>'
+    +'<div style="font-size:var(--fsxs);color:var(--dim);letter-spacing:.15em;text-transform:uppercase">'+dayName+'</div>'
+    +'<div style="font-size:calc(24px * var(--fs));color:var(--gold);font-style:italic;margin-top:2px">'+t+'</div>'
+    +'</div>'
+    +'<div style="text-align:right">'
+    +(streak>0
+      ?'<div style="font-size:calc(20px * var(--fs))">\uD83D\uDD25</div>'
+       +'<div style="font-size:var(--fssm);color:var(--amber)">'+streak+' day streak</div>'
+      :'<div style="font-size:var(--fssm);color:var(--dim)">No streak yet</div>')
+    +'</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;text-align:center">'
+    +'<div style="background:rgba(0,0,0,.25);border-radius:8px;padding:8px">'
+    +'<div style="font-size:calc(20px * var(--fs));color:var(--gold)">'+fmtDur(todayMins)+'</div>'
+    +'<div style="font-size:var(--fsxs);color:var(--dim);margin-top:1px">Today</div></div>'
+    +'<div style="background:rgba(0,0,0,.25);border-radius:8px;padding:8px">'
+    +'<div style="font-size:calc(20px * var(--fs));color:var(--gold)">'+fmtDur(weekMins)+'</div>'
+    +'<div style="font-size:var(--fsxs);color:var(--dim);margin-top:1px">7 days</div></div>'
+    +'</div></div>';
+
+  // ── 7-day mini calendar row ──
+  h+='<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:var(--fsxs);color:var(--dim);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px">Last 7 Days</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+  for(var di=6;di>=0;di--){
+    var dd=addDays(t,-di);
+    var ddMins=sessions.filter(function(s){return s.date===dd;}).reduce(function(a,s){return a+(s.duration||0);},0);
+    var isToday=dd===t;
+    var hasSess=ddMins>0;
+    var dotCol=hasSess?'var(--green)':'var(--border)';
+    var bg=isToday?'rgba(201,169,110,.12)':'transparent';
+    var border=isToday?'1px solid var(--gold)':'1px solid transparent';
+    var dow=new Date(dd+'T12:00:00').getDay();
+    var dowLbl=['Su','Mo','Tu','We','Th','Fr','Sa'][dow];
+    h+='<div style="text-align:center;background:'+bg+';border:'+border+';border-radius:6px;padding:4px 2px">'
+      +'<div style="font-size:var(--fsxs);color:'+(isToday?'var(--gold)':'var(--dim)')+'">'+dowLbl+'</div>'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+dotCol+';margin:4px auto"></div>'
+      +(hasSess?'<div style="font-size:calc(7px * var(--fs));color:var(--green)">'+fmtDur(ddMins)+'</div>':'<div style="font-size:calc(7px * var(--fs));color:transparent">·</div>')
+      +'</div>';
+  }
+  h+='</div></div>';
+
+  // ── Gebrian due today (grouped by piece) ──
   var due=getDueSR(t);
   var duePend=due.filter(function(sr){return !srTicked(sr,t);});
   var dueTick=due.filter(function(sr){return srTicked(sr,t);});
   if(duePend.length||dueTick.length){
     h+='<div class="section-hd">\uD83D\uDD14 Gebrian Due Today</div>';
+    // Group pending by piece
+    var pieceGroups={};
+    var pieceOrder=[];
     duePend.forEach(function(sr){
-      var sched=buildSched(sr.start);
-      var entry=sched.find(function(d){return d.date===t&&d.isPrac;});
-      h+='<div class="card" style="border-color:'+entry.color+';margin-bottom:8px">'
-        +'<div style="display:flex;align-items:center;gap:10px">'
-        +'<div style="flex:1"><div style="font-size:var(--fsmd)">'+srTitle(sr)
-        +(latestLesson&&latestLesson.focusSections&&latestLesson.focusSections.some(function(f){return f.pieceId===sr.pieceId&&(f.sectionId||null)===(sr.sectionId||null);})
-          ?' <span style="font-size:var(--fsxs);color:var(--gold)">🎓 Teacher focus</span>':'')
+      var pid=sr.pieceId;
+      if(!pieceGroups[pid]){
+        var p=pieces.find(function(x){return x.id===pid;});
+        pieceGroups[pid]={name:p?p.name:'Unknown',items:[]};
+        pieceOrder.push(pid);
+      }
+      pieceGroups[pid].items.push(sr);
+    });
+    pieceOrder.forEach(function(pid){
+      var grp=pieceGroups[pid];
+      var gid='tday-grp-'+pid;
+      var allDone=grp.items.every(function(sr){return srTicked(sr,t);});
+      // Determine dominant phase colour from first item
+      var firstEntry=(function(){
+        var sched=buildSched(grp.items[0].start);
+        return sched.find(function(d){return d.date===t&&d.isPrac;})||{color:'var(--dim)',phase:'Due'};
+      })();
+      var hasTeacher=grp.items.some(function(sr){
+        return latestLesson&&latestLesson.focusSections&&latestLesson.focusSections.some(function(f){
+          return f.pieceId===sr.pieceId&&(f.sectionId||null)===(sr.sectionId||null);
+        });
+      });
+      h+='<div class="card" style="border-color:'+firstEntry.color+';margin-bottom:8px;padding:0;overflow:hidden">';
+      // Piece header row — tappable to collapse
+      h+='<div onclick="tog(\''+gid+'\')" style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer">'
+        +'<div style="flex:1">'
+        +'<div style="font-size:var(--fslg)">'+grp.name
+        +(hasTeacher?' <span style="font-size:var(--fsxs);color:var(--gold)">\uD83C\uDF93</span>':'')
         +'</div>'
-        +'<span class="phase-chip" style="background:'+entry.color+'22;border:1px solid '+entry.color+';color:'+entry.color+'">'+entry.phase+'</span></div>'
-        +'<button onclick="todayQuickLog('+sr.id+')" class="btn-sm" style="white-space:nowrap;border-color:var(--gold);color:var(--gold)">+ Log</button>'
-        +'<button onclick="navTo(\'practice\')" class="btn-gold" style="white-space:nowrap">Practice</button>'
-        +'</div></div>';
+        +'<div style="margin-top:3px">'
+        +'<span class="phase-chip" style="background:'+firstEntry.color+'22;border:1px solid '+firstEntry.color+';color:'+firstEntry.color+'">'+firstEntry.phase+'</span>'
+        +'<span style="font-size:var(--fsxs);color:var(--dim);margin-left:6px">'+grp.items.length+' section'+(grp.items.length!==1?'s':'')+'</span>'
+        +'</div></div>'
+        +'<span style="color:var(--dim);font-size:calc(16px * var(--fs))">&#x203a;</span>'
+        +'</div>';
+      // Collapsible section list — open by default
+      h+='<div id="'+gid+'" class="sec-body open" style="border-top:1px solid var(--border)">';
+      grp.items.forEach(function(sr){
+        var sched=buildSched(sr.start);
+        var entry=sched.find(function(d){return d.date===t&&d.isPrac;})||{color:'var(--dim)',phase:'Due'};
+        var isTeacher=latestLesson&&latestLesson.focusSections&&latestLesson.focusSections.some(function(f){
+          return f.pieceId===sr.pieceId&&(f.sectionId||null)===(sr.sectionId||null);
+        });
+        var secLabel=(function(){
+          var p=pieces.find(function(x){return x.id===sr.pieceId;});
+          if(!sr.sectionId) return 'Whole piece';
+          var sec=p&&p.sections.find(function(s){return s.id===sr.sectionId;});
+          var ss=sec&&sr.subsectionId&&sec.subsections.find(function(x){return x.id===sr.subsectionId;});
+          return (sec?sec.name:'')+(ss?' \u203a '+ss.name:'');
+        })();
+        h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)">'
+          +'<div style="flex:1">'
+          +'<div style="font-size:var(--fsmd)">'+secLabel
+          +(isTeacher?' <span style="font-size:var(--fsxs);color:var(--gold)">\uD83C\uDF93</span>':'')
+          +'</div>'
+          +'</div>'
+          +(srTicked(sr,t)
+            ?'<div style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:var(--fsxs);color:#0a0a0e">\u2713</div>'
+            :'<button onclick="todayQuickLog('+sr.id+')" class="btn-sm" style="white-space:nowrap;border-color:var(--gold);color:var(--gold)">\u266A Log</button>')
+          +'</div>';
+      });
+      h+='</div></div>';
     });
-    dueTick.forEach(function(sr){
-      h+='<div class="card" style="border-color:var(--green);opacity:.7;margin-bottom:8px;display:flex;align-items:center;gap:10px">'
-        +'<div style="flex:1;font-size:var(--fsmd)">'+srTitle(sr)+'</div>'
-        +'<span style="color:var(--green);font-size:var(--fslg)">\u2713</span></div>';
-    });
+    // Done items as compact footer if any
+    if(dueTick.length&&!duePend.length){
+      dueTick.forEach(function(sr){
+        h+='<div class="card" style="border-color:var(--green);opacity:.7;margin-bottom:6px;display:flex;align-items:center;gap:10px">'
+          +'<div style="width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:var(--fsxs);color:#0a0a0e;flex-shrink:0">\u2713</div>'
+          +'<div style="flex:1;font-size:var(--fsmd);color:var(--dim)">'+srTitle(sr)+'</div>'
+          +'</div>';
+      });
+    }
   }
 
-  // Recent time
-  var weekAgo=addDays(t,-7);
-  var recentS=sessions.filter(function(s){return s.date>=weekAgo;});
-  var weekMins=recentS.reduce(function(a,s){return a+s.duration;},0);
-  var todayMins=sessions.filter(function(s){return s.date===t;}).reduce(function(a,s){return a+s.duration;},0);
+  // ── Teacher focus reminder ──
+  if(latestLesson&&latestLesson.focusSections&&latestLesson.focusSections.length){
+    h+='<div class="section-hd">\uD83C\uDF93 Teacher Focus'+(latestLesson.date?' \u2014 '+latestLesson.date:'')+'</div>';
+    h+='<div class="card" style="border-color:#2a3040;margin-bottom:12px">';
+    if(latestLesson.notes) h+='<div style="font-size:var(--fsmd);color:var(--sub);margin-bottom:10px;line-height:1.7;font-style:italic">\u201C'+latestLesson.notes+'\u201D</div>';
+    latestLesson.focusSections.forEach(function(f){
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">'
+        +'<span style="color:var(--gold);font-size:var(--fsmd)">\u266A</span>'
+        +'<span style="font-size:var(--fsmd)">'+f.label+'</span>'
+        +'</div>';
+    });
+    h+='</div>';
+  }
 
-  h+='<div class="section-hd">This Week</div>'
-    +'<div class="card"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center">'
-    +'<div><div style="font-size:calc(22px * var(--fs));color:var(--gold)">'+fmtDur(todayMins)+'</div><div style="font-size:var(--fsxs);color:var(--dim);margin-top:2px">Today</div></div>'
-    +'<div><div style="font-size:calc(22px * var(--fs));color:var(--gold)">'+fmtDur(weekMins)+'</div><div style="font-size:var(--fsxs);color:var(--dim);margin-top:2px">7 days</div></div>'
-    +'</div></div>';
-
-  // BPM progress
+  // ── BPM moves (last session vs previous) ──
   var bpmMoves=[];
   pieces.forEach(function(p){
     p.sections.forEach(function(sec){
       var secSess=sessions.filter(function(s){
-        return s.entries&&s.entries.some(function(e){return e.sectionId===sec.id;});
+        return s.entries&&s.entries.some(function(e){return e.sectionId===sec.id&&(e.bpmEnd||e.bpmStart);});
       }).sort(function(a,b){return b.date.localeCompare(a.date);});
       if(secSess.length<2) return;
-      var e0=secSess[0].entries.find(function(e){return e.sectionId===sec.id;});
-      var e1=secSess[1].entries.find(function(e){return e.sectionId===sec.id;});
+      var e0=secSess[0].entries.find(function(e){return e.sectionId===sec.id&&(e.bpmEnd||e.bpmStart);});
+      var e1=secSess[1].entries.find(function(e){return e.sectionId===sec.id&&(e.bpmEnd||e.bpmStart);});
       if(!e0||!e1) return;
       var b0=e0.bpmEnd||e0.bpmStart, b1=e1.bpmEnd||e1.bpmStart;
-      if(!b0||!b1) return;
-      var d=b0-b1;
-      if(d!==0) bpmMoves.push({name:p.name+' \u203a '+sec.name,d:d,from:b1,to:b0,nv:e0.noteVal});
+      if(!b0||!b1||b0===b1) return;
+      bpmMoves.push({name:p.name+' \u203a '+sec.name,d:b0-b1,to:b0,nv:e0.noteVal,date:secSess[0].date});
     });
   });
+  bpmMoves.sort(function(a,b){return b.date.localeCompare(a.date);});
   if(bpmMoves.length){
-    h+='<div class="section-hd">\u266A BPM Progress</div>';
+    h+='<div class="section-hd">\u266A Recent BPM Movement</div>';
     bpmMoves.slice(0,4).forEach(function(b){
       var up=b.d>0; var col=up?'var(--green)':'var(--red)';
       h+='<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'
+        +'<div>'
         +'<div style="font-size:var(--fsmd)">'+b.name+'</div>'
-        +'<div style="color:'+col+';font-size:var(--fsmd)">'+(up?'\u25B2':'\u25BC')+' '+Math.abs(b.d)+' BPM'
-        +(b.nv?' '+nvSym(b.nv):'')+'</div></div>';
+        +'<div style="font-size:var(--fsxs);color:var(--dim);margin-top:2px">'+b.date+'</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+        +'<div style="color:'+col+';font-size:var(--fslg);font-weight:bold">'+(up?'\u25B2':'\u25BC')+' '+Math.abs(b.d)+'</div>'
+        +'<div style="font-size:var(--fsxs);color:var(--dim)">now '+b.to+(b.nv?' '+nvSym(b.nv):'')+' BPM</div>'
+        +'</div></div>';
     });
   }
 
-  var tl2=lessons&&lessons.length?lessons[0]:null;
-  if(tl2&&tl2.focusSections&&tl2.focusSections.length){
-    h+='<div class="section-hd">🎓 Teacher Focus'+(tl2.date?' — '+tl2.date:'')+'</div>';
-    h+='<div class="card" style="margin-bottom:8px">';
-    if(tl2.notes) h+='<div style="font-size:var(--fsmd);color:var(--sub);margin-bottom:8px;line-height:1.6">'+tl2.notes+'</div>';
-    tl2.focusSections.forEach(function(f){
-      h+='<div style="font-size:var(--fsmd);padding:5px 0;border-bottom:1px solid var(--border)">🎓 '+f.label+'</div>';
+  // ── Quick Log ──
+  if(pieces.length){
+    h+='<div class="section-hd">\u266A Quick Log</div>';
+    h+='<div class="card" style="margin-bottom:12px">';
+    pieces.forEach(function(p){
+      var ddId='tday-dd-'+p.id;
+      var ddOpts='<option value="0">'+p.name+' (whole piece)</option>';
+      sortedSecs(p.sections).forEach(function(sec){
+        ddOpts+='<option value="sec:'+sec.id+'">\u00a0\u00a0\u203a '+sec.name+'</option>';
+        sortedSS(sec.subsections).forEach(function(ss){
+          ddOpts+='<option value="ss:'+sec.id+':'+ss.id+'">\u00a0\u00a0\u00a0\u00a0\u2937 '+ss.name+'</option>';
+        });
+      });
+      h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
+        +'<select id="'+ddId+'" style="flex:1;font-size:16px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:Georgia,serif;outline:none;-webkit-appearance:none">'+ddOpts+'</select>'
+        +'<button class="btn-gold" style="white-space:nowrap;font-size:var(--fsxs)" onclick="todayDropdownLog('+p.id+',\''+ddId+'\')">' +
+        '\u266A Log</button>'
+        +'</div>';
     });
     h+='</div>';
   }
-  h+='<button class="btn" onclick="navTo(\'practice\')" style="margin-top:8px">Start Practice</button>';
+
+  // ── CTA ──
+  h+='<button class="btn" onclick="navTo(\'practice\')" style="margin-top:4px">\u25B6 Start Practice</button>';
   return h;
 }
 // ── PRACTICE STATE ────────────────────────────────────────────────
@@ -761,10 +906,18 @@ function vPracSetup(){
           ?'<button class="btn-sm" style="color:var(--green);border-color:var(--green)" onclick="pracRemoveDueSlot('+sr.id+')">Added \u2713</button>'
           :'<button class="btn-accent" onclick="pracAddDueSlot('+sr.id+')">+ Add</button>'
         )+'</div>'
-        +(!inSlots?'<div style="display:flex;gap:8px;align-items:center;margin-top:6px">'
+        +(!inSlots?'<div style="margin-top:6px">'
+          +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">'
           +'<label style="font-size:var(--fsxs);color:var(--dim)">Min:</label>'
           +'<input type="number" id="geb-mins-'+sr.id+'" value="5" min="1" max="60" step="1" style="width:60px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:16px;font-family:Georgia,serif;outline:none;-webkit-appearance:none">'
-          +'<select id="geb-mode-'+sr.id+'" style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:16px;font-family:Georgia,serif;outline:none;-webkit-appearance:none"><option value="free">Free</option><option value="clickup">Clicking Up</option></select>'
+          +'<select id="geb-mode-'+sr.id+'" onchange="gebModeChange('+sr.id+')" style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:16px;font-family:Georgia,serif;outline:none;-webkit-appearance:none"><option value="free">Free</option><option value="clickup">Clicking Up</option></select>'
+          +'</div>'
+          +'<div id="geb-cu-'+sr.id+'" style="display:none"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">'
+          +'<div><label class="lbl">Start BPM</label><input type="number" id="geb-cu-s-'+sr.id+'" placeholder="60" min="20" max="300" style="font-size:16px"></div>'
+          +'<div><label class="lbl">Target BPM</label><input type="number" id="geb-cu-t-'+sr.id+'" placeholder="100" min="20" max="300" style="font-size:16px"></div>'
+          +'<div><label class="lbl">Increment</label><input type="number" id="geb-cu-i-'+sr.id+'" value="4" min="1" max="20" style="font-size:16px"></div>'
+          +'<div><label class="lbl">Overshoot</label><input type="number" id="geb-cu-o-'+sr.id+'" value="4" min="0" max="20" style="font-size:16px"></div>'
+          +'</div></div>'
           +'</div>':'')
         +'</div>';
     });
@@ -784,14 +937,23 @@ function vPracSetup(){
   h+='<div class="card">'
     +'<div class="card-title">Add Slot</div>'
     +'<div class="field"><label class="lbl">Piece</label>'
-    +'<select id="prac-sel-p" onchange="pracPopSec()" style="margin-bottom:6px"><option value="">— select —</option>';
-  pieces.forEach(function(p){ h+='<option value="'+p.id+'">'+p.name+(p.composer?' — '+p.composer:'')+'</option>'; });
+    +'<div class="field"><label class="lbl">Piece / Section</label>'
+    +'<select id="prac-sel-combo" onchange="pracComboChange()" style="font-size:16px"><option value="">— select —</option>';
+  pieces.forEach(function(p){
+    h+='<optgroup label="'+p.name+(p.composer?' — '+p.composer:'')+'">';
+    h+='<option value="p:'+p.id+'">Whole piece</option>';
+    sortedSecs(p.sections).forEach(function(sec){
+      h+='<option value="sec:'+p.id+':'+sec.id+'">§ '+sec.name+'</option>';
+      sortedSS(sec.subsections).forEach(function(ss){
+        h+='<option value="ss:'+p.id+':'+sec.id+':'+ss.id+'">  ⤷ '+ss.name+'</option>';
+      });
+    });
+    h+='</optgroup>';
+  });
   h+='</select></div>'
-    +'<div id="prac-sel-sec-wrap" style="display:none" class="field"><label class="lbl">Section / Sub-section</label>'
-    +'<select id="prac-sel-sec"><option value="">Whole piece</option></select></div>'
     +'<div class="grid2">'
     +'<div><label class="lbl">Minutes</label><input type="number" id="prac-mins" value="5" min="1" step="1"></div>'
-    +'<div><label class="lbl">Mode</label><select id="prac-mode"><option value="free">Free</option><option value="clickup">Clicking Up</option></select></div>'
+    +'<div><label class="lbl">Mode</label><select id="prac-mode" onchange="pracModeChange()"><option value="free">Free</option><option value="clickup">Clicking Up</option></select></div>'
     +'</div>'
     +'<div id="prac-cu-cfg" style="display:none">'
     +'<div class="grid2">'
@@ -821,6 +983,20 @@ function pracSlotHTML(sl,i){
     +'</div></div>';
 }
 
+function pracComboChange(){
+  pracUpdateCUHint();
+}
+function pracModeChange(){
+  var modeEl=document.getElementById('prac-mode');
+  var cu=document.getElementById('prac-cu-cfg');
+  if(cu&&modeEl) cu.style.display=modeEl.value==='clickup'?'block':'none';
+  pracUpdateCUHint();
+}
+function gebModeChange(srId){
+  var modeEl=document.getElementById('geb-mode-'+srId);
+  var cu=document.getElementById('geb-cu-'+srId);
+  if(cu&&modeEl) cu.style.display=modeEl.value==='clickup'?'block':'none';
+}
 function pracPopSec(){
   var pid=+document.getElementById('prac-sel-p').value;
   var p=pieces.find(function(x){return x.id===pid;});
@@ -840,23 +1016,17 @@ function pracPopSec(){
   pracUpdateCUHint();
 }
 
-document.addEventListener('change', function(e){
-  if(e.target&&e.target.id==='prac-mode'){
-    var cu=document.getElementById('prac-cu-cfg');
-    if(cu) cu.style.display=e.target.value==='clickup'?'block':'none';
-    pracUpdateCUHint();
-  }
-  if(e.target&&(e.target.id==='prac-sel-sec'||e.target.id==='prac-sel-p')) pracUpdateCUHint();
-});
+// mode/combo changes handled by inline onchange handlers
 
 function pracUpdateCUHint(){
-  var pid=+(document.getElementById('prac-sel-p')||{}).value;
-  var secVal=(document.getElementById('prac-sel-sec')||{}).value||'';
-  if(!pid) return;
+  var comboVal=(document.getElementById('prac-sel-combo')||{}).value||'';
+  if(!comboVal) return;
+  var parts=comboVal.split(':');
+  var pid=+parts[1];
   var p=pieces.find(function(x){return x.id===pid;}); if(!p) return;
   var sid=null;
-  if(secVal.indexOf('sec:')===0) sid=+secVal.split(':')[1];
-  else if(secVal.indexOf('ss:')===0) sid=+secVal.split(':')[1];
+  if(parts[0]==='sec') sid=+parts[2];
+  else if(parts[0]==='ss') sid=+parts[2];
   var sec=sid?p.sections.find(function(s){return s.id===sid;}):null;
   // Pre-fill CU target from section's working target BPM
   if(sec&&sec.wBpm){
@@ -881,7 +1051,7 @@ function pracAddDueSlot(srId){
   var modeEl=document.getElementById('geb-mode-'+srId);
   var mins=minsEl?parseFloat(minsEl.value)||5:5;
   var mode=modeEl?modeEl.value:'free';
-  prac.slots.push({
+  var slot={
     srId:srId,
     pieceId:p.id, pieceName:p.name,
     sectionId:sr.sectionId||null, sectionName:sec?sec.name:null,
@@ -890,7 +1060,14 @@ function pracAddDueSlot(srId){
     lastBpm:lastB,
     wBpm:sec?sec.wBpm:null, wNV:sec?sec.wNV:null,
     pBpm:sec?sec.pBpm:null, pNV:sec?sec.pNV:null,
-  });
+  };
+  if(mode==='clickup'){
+    slot.cuStart=+(document.getElementById('geb-cu-s-'+srId)||{}).value||lastB&&lastB.end||60;
+    slot.cuTarget=+(document.getElementById('geb-cu-t-'+srId)||{}).value||sec&&sec.wBpm||100;
+    slot.cuInc=+(document.getElementById('geb-cu-i-'+srId)||{}).value||4;
+    slot.cuOver=+(document.getElementById('geb-cu-o-'+srId)||{}).value||4;
+  }
+  prac.slots.push(slot);
   render();
 }
 
@@ -900,9 +1077,12 @@ function pracRemoveDueSlot(srId){
 }
 
 function pracAddSlot(){
-  var pid=+(document.getElementById('prac-sel-p')||{}).value;
+  var comboVal=(document.getElementById('prac-sel-combo')||{}).value||'';
+  if(!comboVal){showToast('Select a piece or section');return;}
+  var parts=comboVal.split(':');
+  var pid=+parts[1];
   var p=pieces.find(function(x){return x.id===pid;}); if(!p){showToast('Select a piece');return;}
-  var secVal=(document.getElementById('prac-sel-sec')||{}).value||'';
+  var secVal=parts[0]==='sec'?'sec:'+parts[2]:parts[0]==='ss'?'ss:'+parts[2]+':'+parts[3]:'';
   var mins=parseFloat((document.getElementById('prac-mins')||{}).value)||5;
   var mode=(document.getElementById('prac-mode')||{}).value||'free';
   var sid=null,ssid=null,sec=null,ss=null;
@@ -1062,6 +1242,10 @@ function pracUpdateFace(){
   }
 }
 
+function cuRender(){
+  var el=document.getElementById('cu-elapsed');
+  if(el&&cuS.startTime) el.textContent=fmtElapsed(Date.now()-cuS.startTime);
+}
 function pracToggle(){
   if(prac.state==='running'){
     prac.state='paused'; clearInterval(prac.interval); prac.interval=null;
@@ -1118,8 +1302,8 @@ function pracStartCU(){
 }
 
 function buildCUSeq(start,target,inc,over){
-  var seq=[]; var a=start,t=target;
-  while(a<t){ seq.push({bpm:a,role:'anchor'}); seq.push({bpm:t,role:'target'}); a+=inc; t+=inc; }
+  var seq=[]; var a=start,tgt=target;
+  while(a<target){ seq.push({bpm:a,role:'anchor'}); seq.push({bpm:tgt,role:'target'}); a+=inc; tgt+=inc; }
   seq.push({bpm:target,role:'goal'});
   if(over>0){seq.push({bpm:target+over,role:'over'});seq.push({bpm:target,role:'goal'});}
   return seq;
@@ -1242,7 +1426,7 @@ function renderSec(p,sec){
              :'<span class="phase-chip" style="background:#1a1926;border:1px solid var(--border);color:var(--dim)">\u25CB No stage</span>';
   var DIFF_META={hard:{col:'var(--red)',lbl:'Hard'},medium:{col:'var(--amber)',lbl:'Med'},easy:{col:'var(--green)',lbl:'Easy'}};
   var dm=sec.difficulty?DIFF_META[sec.difficulty]:null;
-  var diffPill=dm?' <span class="phase-chip" style="background:'+dm.col+'22;border:1px solid '+dm.col+';color:'+dm.col+'">'+dm.lbl+'</span>':'';
+  var diffPill=dm?'<span class="phase-chip" style="background:'+dm.col+'22;border:1px solid '+dm.col+';color:'+dm.col+'">'+ dm.lbl +'</span>':'';
   var h='<div class="sec-block" style="'+(st?'border-color:'+sc+'44':'')+'">'
     +'<div class="sec-header" onclick="tog(\'sb-'+sec.id+'\')">'
     +'<div style="flex:1"><div style="font-size:var(--fsmd)">'+inlineSpan(sec.name,'sec',p.id,sec.id,0)+'</div>'
@@ -1288,13 +1472,23 @@ function renderSec(p,sec){
       var sbid='ssb-'+sec.id+'-'+ss.id;
       var lb=lastBPMFor(p.id,sec.id,ss.id);
       var lh=lb?('Last: '+(lb.start&&lb.start!==lb.end?lb.start+'→'+lb.end:lb.end)+' BPM'+(lb.noteVal?' '+nvSym(lb.noteVal):'')):'';      
+      var SS_DIFF={hard:{col:'var(--red)',lbl:'Hard'},medium:{col:'var(--amber)',lbl:'Med'},easy:{col:'var(--green)',lbl:'Easy'}};
+      var ssDm=ss.difficulty?SS_DIFF[ss.difficulty]:null;
+      var ssDiffPill=ssDm?'<span class="phase-chip" style="background:'+ssDm.col+'22;border:1px solid '+ssDm.col+';color:'+ssDm.col+'">'+ ssDm.lbl +'</span>':'';
       h+='<div class="ss-block">'
-        +'<div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="tog(\''+sbid+'\')" >'
-        +'<div style="flex:1;font-size:var(--fsmd)" onclick="event.stopPropagation()">'+inlineSpan(ss.name,'ss',p.id,sec.id,ss.id)+'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px 0" onclick="tog(\''+sbid+'\')">'
+        +'<div style="flex:1;font-size:var(--fsmd)">'+ss.name+'</div>'
         +(lb?'<span style="font-size:var(--fsxs);color:var(--blue)">♪ '+nvSym(lb.noteVal||'quarter')+' '+(lb.end||'')+'</span>':'')
+        +ssDiffPill
         +'<span style="color:var(--dim);font-size:calc(13px * var(--fs))">&#x203a;</span>'
         +'</div>'
         +'<div class="sec-body" id="'+sbid+'">'
+        +'<div style="margin-bottom:10px"><label class="lbl">Name</label>'
+        +'<span contenteditable="true" spellcheck="false"'
+        +' data-rtype="ss" data-rpid="'+p.id+'" data-rsid="'+sec.id+'" data-rssid="'+ss.id+'"'
+        +' onclick="event.stopPropagation()" onblur="handleRename(this)"'
+        +' style="display:block;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:8px 12px;font-size:16px;font-family:Georgia,serif;outline:none;-webkit-user-select:text;user-select:text">'+ss.name+'</span>'
+        +'</div>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0">'
         +'<div><label class="lbl">Working Target BPM</label>'
         +'<div class="bpm-pair">'
@@ -1308,6 +1502,15 @@ function renderSec(p,sec){
         +'</div></div>'
         +'</div>'
         +(lh?'<div class="bpm-hint" style="margin-bottom:8px">'+lh+'</div>':'')
+        +'<div style="margin-bottom:8px"><label class="lbl">Difficulty</label>'
+        +'<div style="display:flex;gap:4px">'
+        +'<button onclick="setSsDifficulty('+p.id+','+sec.id+','+ss.id+',\'hard\')" class="btn-sm"'
+        +' style="flex:1;text-align:center;border-color:var(--red);color:'+(ss.difficulty==='hard'?'#0a0a0e':'var(--red)')+';background:'+(ss.difficulty==='hard'?'var(--red)':'transparent')+'">Hard</button>'
+        +'<button onclick="setSsDifficulty('+p.id+','+sec.id+','+ss.id+',\'medium\')" class="btn-sm"'
+        +' style="flex:1;text-align:center;border-color:var(--amber);color:'+(ss.difficulty==='medium'?'#0a0a0e':'var(--amber)')+';background:'+(ss.difficulty==='medium'?'var(--amber)':'transparent')+'">Med</button>'
+        +'<button onclick="setSsDifficulty('+p.id+','+sec.id+','+ss.id+',\'easy\')" class="btn-sm"'
+        +' style="flex:1;text-align:center;border-color:var(--green);color:'+(ss.difficulty==='easy'?'#0a0a0e':'var(--green)')+';background:'+(ss.difficulty==='easy'?'var(--green)':'transparent')+'">Easy</button>'
+        +'</div></div>'
         +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
         +'<button class="btn-sm" style="color:var(--red);border-color:var(--red)" onclick="delSS('+p.id+','+sec.id+','+ss.id+')">Remove</button>'
         +'</div></div></div>';
@@ -1361,7 +1564,7 @@ function setSecStage(pid,sid,k){
     srList.unshift({id:uid(),pieceId:pid,sectionId:sid,subsectionId:null,label:p.name,sublabel:sec.name,start:today(),done:false,ticked:[]});
     showToast('Gebrian cycle started for '+sec.name);
   }
-  persist(); render();
+  persist(); renderKeepOpen();
 }
 function setSecWBpm(pid,sid,v){ var p=pieces.find(function(x){return x.id===pid;}); if(!p) return; var sec=p.sections.find(function(s){return s.id===sid;}); if(!sec) return; sec.wBpm=v?+v:null; persist(); }
 function setSecPBpm(pid,sid,v){ var p=pieces.find(function(x){return x.id===pid;}); if(!p) return; var sec=p.sections.find(function(s){return s.id===sid;}); if(!sec) return; sec.pBpm=v?+v:null; persist(); }
@@ -1370,7 +1573,13 @@ function setSecPNV(pid,sid,v){ var p=pieces.find(function(x){return x.id===pid;}
 function setSecDifficulty(pid,sid,d){
   var p=pieces.find(function(x){return x.id===pid;}); if(!p) return;
   var sec=p.sections.find(function(s){return s.id===sid;}); if(!sec) return;
-  sec.difficulty=(sec.difficulty===d?null:d); persist(); render();
+  sec.difficulty=(sec.difficulty===d?null:d); persist(); renderKeepOpen();
+}
+function setSsDifficulty(pid,sid,ssid,d){
+  var p=pieces.find(function(x){return x.id===pid;}); if(!p) return;
+  var sec=p.sections.find(function(s){return s.id===sid;}); if(!sec) return;
+  var ss=sec.subsections.find(function(x){return x.id===ssid;}); if(!ss) return;
+  ss.difficulty=(ss.difficulty===d?null:d); persist(); renderKeepOpen();
 }
 
 // CRUD
@@ -1392,7 +1601,7 @@ function addSection(){
   var name=document.getElementById('as-name').value.trim(); if(!name){showToast('Enter a name');return;}
   var p=pieces.find(function(x){return x.id===pid;}); if(!p) return;
   p.sections.push({id:uid(),name:name,subsections:[],stage:null,difficulty:null,wBpm:null,wNV:'quarter',pBpm:null,pNV:'quarter'});
-  persist(); closeModal('m-add-sec'); render();
+  persist(); closeModal('m-add-sec'); renderKeepOpen();
 }
 function openAddSS(pid,sid,sn){
   document.getElementById('ass-pid').value=pid;
@@ -1406,8 +1615,8 @@ function addSS(){
   var name=document.getElementById('ass-name').value.trim(); if(!name){showToast('Enter a name');return;}
   var p=pieces.find(function(x){return x.id===pid;}); if(!p) return;
   var sec=p.sections.find(function(s){return s.id===sid;}); if(!sec) return;
-  sec.subsections.push({id:uid(),name:name,wBpm:null,wNV:'quarter',pBpm:null,pNV:'quarter'});
-  persist(); closeModal('m-add-ss'); render();
+  sec.subsections.push({id:uid(),name:name,difficulty:null,wBpm:null,wNV:'quarter',pBpm:null,pNV:'quarter'});
+  persist(); closeModal('m-add-ss'); renderKeepOpen();
 }
 function delPiece(id){
   pieces=pieces.filter(function(x){return x.id!==id;});
@@ -1416,13 +1625,13 @@ function delPiece(id){
 function delSec(pid,sid){
   var p=pieces.find(function(x){return x.id===pid;}); if(!p) return;
   p.sections=p.sections.filter(function(s){return s.id!==sid;});
-  persist(); render();
+  persist(); renderKeepOpen();
 }
 function delSS(pid,sid,ssid){
   var p=pieces.find(function(x){return x.id===pid;}); if(!p) return;
   var sec=p.sections.find(function(s){return s.id===sid;}); if(!sec) return;
   sec.subsections=sec.subsections.filter(function(x){return x.id!==ssid;});
-  persist(); render();
+  persist(); renderKeepOpen();
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────
@@ -1558,6 +1767,7 @@ function drawCharts(){}
 // ── SPACED REP ────────────────────────────────────────────────────
 function vSR(){
   var t=today();
+  var latestLesson=lessons&&lessons.length?lessons[0]:null;
   var h='<div class="card" style="margin-bottom:12px"><div class="card-title">Add to Gebrian Schedule</div>'
     +'<div class="field"><label class="lbl">Piece</label>'
     +'<select id="sr-sel-p" onchange="srPopTgts()" style="margin-bottom:8px"><option value="">— select piece —</option>';
@@ -2415,6 +2625,15 @@ function todayQuickLog(srId){
   quickLog(pid, sid||0, ssid||0);
 }
 var todayLogSrId=null;
+function todayDropdownLog(pid,ddId){
+  var sel=document.getElementById(ddId); if(!sel) return;
+  var val=sel.value;
+  var sid=null, ssid=null;
+  if(val.indexOf('sec:')===0){ sid=+val.split(':')[1]; }
+  else if(val.indexOf('ss:')===0){ var pts=val.split(':'); sid=+pts[1]; ssid=+pts[2]; }
+  todayLogSrId=null;
+  quickLog(pid, sid||0, ssid||0);
+}
 
 
 function setSlotRating(slotIdx,n){

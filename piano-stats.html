@@ -4,12 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Piano Stats">
+<link rel="manifest" href="manifest.json">
 <title>Piano Stats</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#0a0a0e;--card:#13131d;--card2:#191926;--border:#22222e;
-  --gold:#c9a96e;--dim:#4a4860;--sub:#7a7898;--text:#e2ddf0;
+  --gold:#c9a96e;--dim:#9490aa;--sub:#b8b6cc;--text:#e2ddf0;
   --red:#d96060;--green:#56b870;--blue:#5b9bd5;--purple:#a07cd0;--amber:#e8a838;
   --fs:1;
   --fsxs:calc(9px * var(--fs));--fssm:calc(11px * var(--fs));
@@ -171,10 +174,11 @@ function diffTag(d){
   if(!d) return '';
   var c=d==='hard'?'var(--red)':d==='medium'?'var(--amber)':'var(--green)';
   var l=d==='hard'?'Hard':d==='medium'?'Med':'Easy';
-  return ' <span class="phase-chip" style="background:'+c+'22;border:1px solid '+c+';color:'+c+'">'+l+'</span>';
+  return '<span class="phase-chip" style="background:'+c+'22;border:1px solid '+c+';color:'+c+'">'+ l +'</span>';
 }
 
-// ── NAV ───────────────────────────────────────────────────────────
+// ── NAV ─────────────────────────────────────────────────────────────
+var curView='history';
 var curView='history';
 var chartInsts={};
 function navTo(v){
@@ -426,6 +430,45 @@ function vInsights(){
     +'<div><div style="font-size:calc(20px * var(--fs));color:var(--gold)">'+pieces.length+'</div><div style="font-size:var(--fsxs);color:var(--dim);margin-top:2px">Pieces</div></div>'
     +'</div></div>';
 
+  // ── Attention Needed card ──
+  var attSections=[];
+  pieces.forEach(function(p){
+    sortedSecs(p.sections).forEach(function(sec){
+      var ins=computeInsight(p,sec);
+      if(ins&&ins.top.level!=='ok') attSections.push({p:p,sec:sec,ins:ins});
+    });
+  });
+  attSections.sort(function(a,b){
+    var order={act:0,watch:1};
+    return (order[a.ins.top.level]||9)-(order[b.ins.top.level]||9);
+  });
+  if(attSections.length){
+    h+='<div class="card" style="margin-bottom:12px;border-color:#2a1a1a">'
+      +'<div class="card-title" style="color:var(--amber)">&#x26A0; Attention Needed</div>';
+    attSections.forEach(function(x){
+      var col=x.ins.top.level==='act'?'var(--red)':'var(--amber)';
+      var diffLabel=x.sec.difficulty?(' <span style="font-size:var(--fsxs);color:var(--dim)">('+x.sec.difficulty+')</span>'):''; 
+      h+='<div style="padding:10px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+        +'<div style="flex:1">'
+        +'<div style="font-size:var(--fsmd)">'+x.p.name+' \u203a '+x.sec.name+diffLabel+'</div>'
+        +'<div style="font-size:var(--fsxs);color:'+col+';margin-top:3px">'+x.ins.top.action+'</div>'
+        +'</div>'
+        +'<span class="phase-chip" style="background:'+col+'22;border:1px solid '+col+';color:'+col+';white-space:nowrap">'+x.ins.top.tag+'</span>'
+        +'</div>'
+        +(x.ins.signals.length>1
+          ?'<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">'
+            +x.ins.signals.slice(1).map(function(sg){
+              var c2=sg.level==='act'?'var(--red)':sg.level==='watch'?'var(--amber)':'var(--green)';
+              return '<span class="phase-chip" style="background:'+c2+'22;border:1px solid '+c2+';color:'+c2+'">'+sg.tag+'</span>';
+            }).join('')
+            +'</div>'
+          :'')
+        +'</div>';
+    });
+    h+='</div>';
+  }
+
   // Monthly calendar
   // Section minutes chart
   var sPieceOpts='<option value="">All pieces</option>';
@@ -447,7 +490,8 @@ function vInsights(){
   if(pieces.length){
     h+='<div style="font-size:var(--fsxs);color:var(--dim);letter-spacing:.18em;text-transform:uppercase;margin:16px 0 8px">Time per Piece</div>';
     var pd=pieces.map(function(p){return {p:p,mins:minsFor(p.id,null,null)};})
-      .filter(function(x){return x.mins>0;}).sort(function(a,b){return b.mins-a.mins;});
+      .filter(function(x){return x.mins>0||x.p.sections.some(function(sec){return sec.difficulty;})})
+      .sort(function(a,b){return b.mins-a.mins;});
     pd.forEach(function(x){
       var p=x.p;
       var sc=sessions.filter(function(s){return s.entries&&s.entries.some(function(e){return e.pieceId===p.id;});}).length;
@@ -461,8 +505,8 @@ function vInsights(){
         var sd=sortedSecs(p.sections).map(function(sec){
           return {sec:sec,mins:minsFor(p.id,sec.id,null),
             count:sessions.filter(function(s){return s.entries&&s.entries.some(function(e){return e.sectionId===sec.id;});}).length};
-        }).filter(function(d){return d.mins>0;});
-        var maxM=sd[0]?sd[0].mins:1;
+        }).filter(function(d){return d.mins>0||d.sec.difficulty;});
+        var maxM=sd.reduce(function(m,d){return d.mins>m?d.mins:m;},1);
         sd.forEach(function(d){
           var barW=Math.round(d.mins/maxM*100);
           var pct=x.mins>0?Math.round(d.mins/x.mins*100):0;
@@ -478,7 +522,10 @@ function vInsights(){
           }
           h+='<div style="margin-bottom:10px">'
             +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
-            +'<div style="font-size:var(--fsmd)">'+d.sec.name+(d.sec.stage?' <span class="phase-chip" style="background:'+sColor(d.sec.stage)+'22;border:1px solid '+sColor(d.sec.stage)+';color:'+sColor(d.sec.stage)+'">'+sName(d.sec.stage)+'</span>':'')+diffTag(d.sec.difficulty)+'</div>'
+            +(function(){
+              var ins=computeInsight(p,d.sec);
+              return '<div style="font-size:var(--fsmd)">'+d.sec.name+(d.sec.stage?' <span class="phase-chip" style="background:'+sColor(d.sec.stage)+'22;border:1px solid '+sColor(d.sec.stage)+';color:'+sColor(d.sec.stage)+'">'+ sName(d.sec.stage) +'</span>':'')+diffTag(d.sec.difficulty)+insightBadge(ins)+'</div>';
+            })()
             +'<div style="font-size:var(--fsxs);color:var(--dim)">'+fmtDur(d.mins)+' ('+pct+'%)</div></div>'
             +'<div class="prog-bg"><div class="prog-fill" style="width:'+barW+'%;background:var(--gold)"></div></div>'
             +(bpmLine?'<div style="margin-top:4px">'+bpmLine+'</div>':'')
@@ -544,7 +591,122 @@ function buildMonthCal(){
   return h+'</div>';
 }
 
-function drawInsightCharts(){} // placeholder, no chart needed on insights currently
+function secBpmSessions(pid, sid){
+  // Returns sessions for this section that have BPM data, sorted oldest first
+  var result=[];
+  sessions.forEach(function(s){
+    if(!s.entries) return;
+    var e=s.entries.find(function(e){
+      return e.sectionId===sid&&e.pieceId===pid&&(e.bpmEnd||e.bpmStart);
+    });
+    if(e) result.push({date:s.date,bpm:e.bpmEnd||e.bpmStart,dur:s.duration||0,rating:s.rating||3});
+  });
+  result.sort(function(a,b){return a.date.localeCompare(b.date);});
+  return result;
+}
+
+function daysBetween(a,b){
+  return Math.round((new Date(b)-new Date(a))/86400000);
+}
+
+function computeInsight(p, sec){
+  var diff=sec.difficulty||null;
+  var bs=secBpmSessions(p.id, sec.id);
+  if(bs.length<2) return null; // need at least 2 sessions to say anything
+
+  var signals=[];
+  var t=today();
+
+  // ── 1. BPM velocity (BPM gained per hour) ──
+  var firstBpm=bs[0].bpm, lastBpm=bs[bs.length-1].bpm;
+  var totalHrs=bs.reduce(function(a,x){return a+x.dur;},0)/60;
+  var gained=lastBpm-firstBpm;
+  var velocity=totalHrs>0?gained/totalHrs:0;
+  // Low velocity threshold varies by difficulty
+  var velThresh=diff==='hard'?0.5:diff==='easy'?2:1;
+  if(gained>0&&velocity<velThresh&&totalHrs>1){
+    signals.push({level:'watch',tag:'Slow progress',
+      action:'BPM gains are slow ('+Math.round(velocity*10)/10+' BPM/hr). Try shorter, more focused slots.'});
+  }
+
+  // ── 2. Diminishing returns (last 3 sessions flat) ──
+  if(bs.length>=3){
+    var last3=bs.slice(-3);
+    var d1=last3[1].bpm-last3[0].bpm;
+    var d2=last3[2].bpm-last3[1].bpm;
+    var bothFlat=Math.abs(d1)<=2&&Math.abs(d2)<=2;
+    if(bothFlat){
+      if(diff==='easy'){
+        signals.push({level:'act',tag:'Stalled',
+          action:'3 sessions with no BPM gain on an Easy section. Break into smaller chunks or check fingering.'});
+      } else if(diff==='hard'){
+        signals.push({level:'watch',tag:'Plateau',
+          action:'BPM flat for 3 sessions (normal for Hard). Consider a rest day then drop BPM 10% to consolidate.'});
+      } else {
+        signals.push({level:'watch',tag:'Plateau',
+          action:'No BPM gain in last 3 sessions. Try dropping start BPM by 20% for one session.'});
+      }
+    }
+  }
+
+  // ── 3. Forgetting curve: BPM drop vs gap ──
+  var drops=[];
+  for(var i=1;i<bs.length;i++){
+    var gap=daysBetween(bs[i-1].date,bs[i].date);
+    var drop=bs[i-1].bpm-bs[i].bpm;
+    if(drop>0&&gap>=1) drops.push({gap:gap,drop:drop});
+  }
+  if(drops.length>=2){
+    var avgDrop=drops.reduce(function(a,x){return a+x.drop;},0)/drops.length;
+    var avgGap=drops.reduce(function(a,x){return a+x.gap;},0)/drops.length;
+    // Flag if losing >5 BPM on average, especially on short gaps
+    if(avgDrop>5&&avgGap<4){
+      signals.push({level:'act',tag:'Poor retention',
+        action:'Losing ~'+Math.round(avgDrop)+' BPM after just '+Math.round(avgGap)+' days. Gebrian intervals may be too long — practise more frequently.'});
+    } else if(avgDrop>8){
+      signals.push({level:'watch',tag:'Retention risk',
+        action:'Significant BPM loss between sessions (~'+Math.round(avgDrop)+' BPM). Check Gebrian schedule is active.'});
+    }
+  }
+
+  // ── 4. Session quality vs duration ──
+  if(bs.length>=3){
+    var longSess=bs.filter(function(x){return x.dur>=20;});
+    var shortSess=bs.filter(function(x){return x.dur>0&&x.dur<20;});
+    if(longSess.length>=2&&shortSess.length>=2){
+      var avgRatingLong=longSess.reduce(function(a,x){return a+x.rating;},0)/longSess.length;
+      var avgRatingShort=shortSess.reduce(function(a,x){return a+x.rating;},0)/shortSess.length;
+      if(avgRatingLong<avgRatingShort-0.8){
+        signals.push({level:'watch',tag:'Fatigue pattern',
+          action:'Shorter sessions rate higher than longer ones. Keep slots under 15 min for this section.'});
+      }
+    }
+  }
+
+  // ── 5. Target proximity ──
+  if(sec.pBpm&&lastBpm){
+    var pct=Math.round(lastBpm/sec.pBpm*100);
+    if(pct>=95){
+      signals.push({level:'ok',tag:'Near target',
+        action:'At '+pct+'% of target BPM. Focus on quality and consistency, not speed.'});
+    }
+  }
+
+  if(!signals.length) return null;
+
+  // Return highest-priority signal (act > watch > ok)
+  var order={act:0,watch:1,ok:2};
+  signals.sort(function(a,b){return order[a.level]-order[b.level];});
+  return {signals:signals,top:signals[0],lastBpm:lastBpm,sessions:bs.length,diff:diff};
+}
+
+function insightBadge(ins){
+  if(!ins) return '';
+  var col=ins.top.level==='act'?'var(--red)':ins.top.level==='watch'?'var(--amber)':'var(--green)';
+  return ' <span class="phase-chip" style="background:'+col+'22;border:1px solid '+col+';color:'+col+'">'+ins.top.tag+'</span>';
+}
+
+function drawInsightCharts(){} // charts handled inline
 
 // ── BPM PROGRESS ─────────────────────────────────────────────────
 function vBPM(){
