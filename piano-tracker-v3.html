@@ -2493,7 +2493,7 @@ function vBackup(){
 }
 
 function showExport(){
-  var data={version:2,exported:new Date().toISOString(),pieces:pieces,sessions:sessions,sr:srList,perf:perfPlans,lessons:lessons};
+  var data={version:3,exported:new Date().toISOString(),pieces:pieces,sessions:sessions,sr:srList,perf:perfPlans,lessons:lessons,settings:settings};
   var ta=document.getElementById('export-ta'); var wrap=document.getElementById('export-out');
   if(ta) ta.value=JSON.stringify(data);
   if(wrap) wrap.style.display='block';
@@ -2541,6 +2541,9 @@ function doImport(){
       });
     }
     if(d.sr) srList=d.sr;
+    if(d.lessons) lessons=d.lessons;
+    if(d.perf) perfPlans=d.perf;
+    if(d.settings) settings=d.settings;
     // Ensure all pieces have required fields
     pieces=pieces.map(function(p){
       if(!p.sections) p.sections=[];
@@ -2555,6 +2558,9 @@ function doImport(){
     localStorage.setItem('pj2-pieces',JSON.stringify(pieces));
     localStorage.setItem('pj2-sessions',JSON.stringify(sessions));
     localStorage.setItem('pj2-sr',JSON.stringify(srList));
+    localStorage.setItem('pj2-lessons',JSON.stringify(lessons));
+    localStorage.setItem('pj2-perf',JSON.stringify(perfPlans));
+    localStorage.setItem('pj2-settings',JSON.stringify(settings));
     showToast('Data restored \u2713'); render();
   }catch(e){showToast('Import failed: '+e.message);}
 }
