@@ -1713,6 +1713,16 @@ function vSR(){
   // Group by piece
   var pids=[]; active.forEach(function(sr){if(pids.indexOf(sr.pieceId)<0)pids.push(sr.pieceId);});
   if(pids.length){
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+    if(srSelectMode){
+      h+='<div style="flex:1"></div>';
+      h+='<button class="btn-sm" style="color:var(--red);border-color:var(--red)" onclick="toggleSRSelectMode()">Cancel</button>';
+      if(srSelected.length) h+='<button class="btn-sm" style="color:'+(srBatchDeletePending?'var(--red)':'var(--text)')+';border-color:'+(srBatchDeletePending?'var(--red)':'var(--border)')+'" onclick="batchDeleteSR()">'+(srBatchDeletePending?'Confirm delete':'Delete ('+srSelected.length+')')+'</button>';
+    } else {
+      h+='<div style="flex:1"></div>';
+      h+='<button class="btn-sm" onclick="toggleSRSelectMode()">Select</button>';
+    }
+    h+='</div>';
     pids.forEach(function(pid){
       var entries=active.filter(function(sr){return sr.pieceId===pid;});
       var p=pieces.find(function(x){return x.id===pid;});
@@ -1737,7 +1747,7 @@ function vSR(){
         var sched=buildSchedSR(sr);
         var entry=sched.find(function(d){return d.date===t&&d.isPrac;});
         var next=sched.filter(function(d){return d.date>t&&d.isPrac;})[0];
-        h+='<div class="card" style="border-color:'+entry.color+';margin-bottom:8px">'
+        h+='<div class="card" style="border-color:'+(srSelectMode&&srSelected.indexOf(sr.id)>=0?'var(--gold)':entry.color)+';margin-bottom:8px">'
           +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
           +'<div style="flex:1"><div style="font-size:var(--fsmd)">'+srTitle(sr)
         +(latestLesson&&latestLesson.focusSections&&latestLesson.focusSections.some(function(f){return f.pieceId===sr.pieceId&&(f.sectionId||null)===(sr.sectionId||null);})
@@ -1749,19 +1759,25 @@ function vSR(){
             +'<button class="btn-sm" style="padding:1px 6px;font-size:calc(8px * var(--fs))" onclick="slipSR('+sr.id+')">+1d</button>'
             +'</div>':'')
           +'</div>'
-          +'<div style="display:flex;flex-direction:column;align-items:center;gap:6px">'
-          +'<button onclick="tickSR('+sr.id+',\''+t+'\')" style="width:40px;height:40px;border:2px solid '+entry.color+';border-radius:50%;background:transparent;color:'+entry.color+';font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#9675;</button>'
-          +'<button class="btn-sm" style="padding:1px 5px;color:'+(srDeletePending===sr.id?'var(--red)':'var(--dim)')+';border-color:'+(srDeletePending===sr.id?'var(--red)':'var(--border)')+'" onclick="delSR('+sr.id+')">&#x2715;</button>'
-          +'</div>'
+          +(srSelectMode
+            ?'<div onclick="toggleSREntry('+sr.id+')" style="width:32px;height:32px;border:2px solid var(--gold);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:'+(srSelected.indexOf(sr.id)>=0?'var(--gold)':'transparent')+';color:'+(srSelected.indexOf(sr.id)>=0?'#0a0a0e':'var(--gold)')+';font-size:var(--fsmd)">'+(srSelected.indexOf(sr.id)>=0?'\u2713':'')+' </div>'
+            :'<div style="display:flex;flex-direction:column;align-items:center;gap:6px">'
+            +'<button onclick="tickSR('+sr.id+',\''+t+'\')" style="width:40px;height:40px;border:2px solid '+entry.color+';border-radius:50%;background:transparent;color:'+entry.color+';font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#9675;</button>'
+            +'<button class="btn-sm" style="padding:1px 5px;color:'+(srDeletePending===sr.id?'var(--red)':'var(--dim)')+';border-color:'+(srDeletePending===sr.id?'var(--red)':'var(--border)')+'" onclick="delSR('+sr.id+')">&#x2715;</button>'
+            +'<button class="btn-sm" style="padding:1px 5px;color:var(--green);border-color:var(--green)" onclick="markSRDone('+sr.id+')">Done</button>'
+            +'</div>')
           +'</div></div>';
       });
       dueTick.forEach(function(sr){
-        h+='<div class="card" style="border-color:var(--green);opacity:.8;margin-bottom:8px;display:flex;align-items:center;gap:10px">'
+        h+='<div class="card" style="border-color:'+(srSelectMode&&srSelected.indexOf(sr.id)>=0?'var(--gold)':'var(--green)')+';opacity:.8;margin-bottom:8px;display:flex;align-items:center;gap:10px">'
           +'<div style="flex:1;font-size:var(--fsmd)">'+srTitle(sr)+'</div>'
-          +'<div style="display:flex;flex-direction:column;align-items:center;gap:6px">'
-          +'<button onclick="tickSR('+sr.id+',\''+t+'\')" style="width:40px;height:40px;border:2px solid var(--green);border-radius:50%;background:var(--green);color:#0a0a0e;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#x2713;</button>'
-          +'<button class="btn-sm" style="padding:1px 5px;color:'+(srDeletePending===sr.id?'var(--red)':'var(--dim)')+';border-color:'+(srDeletePending===sr.id?'var(--red)':'var(--border)')+'" onclick="delSR('+sr.id+')">&#x2715;</button>'
-          +'</div>'
+          +(srSelectMode
+            ?'<div onclick="toggleSREntry('+sr.id+')" style="width:32px;height:32px;border:2px solid var(--gold);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:'+(srSelected.indexOf(sr.id)>=0?'var(--gold)':'transparent')+';color:'+(srSelected.indexOf(sr.id)>=0?'#0a0a0e':'var(--gold)')+';font-size:var(--fsmd)">'+(srSelected.indexOf(sr.id)>=0?'\u2713':'')+' </div>'
+            :'<div style="display:flex;flex-direction:column;align-items:center;gap:6px">'
+            +'<button onclick="tickSR('+sr.id+',\''+t+'\')" style="width:40px;height:40px;border:2px solid var(--green);border-radius:50%;background:var(--green);color:#0a0a0e;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#x2713;</button>'
+            +'<button class="btn-sm" style="padding:1px 5px;color:'+(srDeletePending===sr.id?'var(--red)':'var(--dim)')+';border-color:'+(srDeletePending===sr.id?'var(--red)':'var(--border)')+'" onclick="delSR('+sr.id+')">&#x2715;</button>'
+            +'<button class="btn-sm" style="padding:1px 5px;color:var(--green);border-color:var(--green)" onclick="markSRDone('+sr.id+')">Done</button>'
+            +'</div>')
           +'</div>';
       });
       upcoming.forEach(function(sr){
@@ -1770,7 +1786,7 @@ function vSR(){
         var tk=sr.ticked||[]; var tot=sched.filter(function(d){return d.isPrac;}).length||1;
         var dn=sched.filter(function(d){return d.isPrac&&d.date<=t;}).filter(function(d){return tk.indexOf(d.date)>=0;}).length;
         var pct=Math.round(dn/tot*100);
-        h+='<div class="card" style="margin-bottom:8px">'
+        h+='<div class="card" style="margin-bottom:8px;border-color:'+(srSelectMode&&srSelected.indexOf(sr.id)>=0?'var(--gold)':'var(--border)')+'">'
           +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
           +'<div style="flex:1"><div style="font-size:var(--fsmd)">'+srTitle(sr)
         +(latestLesson&&latestLesson.focusSections&&latestLesson.focusSections.some(function(f){return f.pieceId===sr.pieceId&&(f.sectionId||null)===(sr.sectionId||null);})
@@ -1783,7 +1799,14 @@ function vSR(){
             +'</div>':'')
           +'<div style="font-size:var(--fsxs);color:var(--dim);margin-top:6px">'+pct+'% complete</div>'
           +'<div class="prog-bg"><div class="prog-fill" style="width:'+pct+'%;background:var(--gold)"></div></div>'
-          +'</div><button class="btn-sm" onclick="delSR('+sr.id+')">&#x2715;</button></div></div>';
+          +'</div>'
+          +(srSelectMode
+            ?'<div onclick="toggleSREntry('+sr.id+')" style="width:32px;height:32px;border:2px solid var(--gold);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:'+(srSelected.indexOf(sr.id)>=0?'var(--gold)':'transparent')+';color:'+(srSelected.indexOf(sr.id)>=0?'#0a0a0e':'var(--gold)')+';font-size:var(--fsmd)">'+(srSelected.indexOf(sr.id)>=0?'\u2713':'')+' </div>'
+            :'<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'
+            +'<button class="btn-sm" onclick="delSR('+sr.id+')">&#x2715;</button>'
+            +'<button class="btn-sm" style="padding:1px 5px;color:var(--green);border-color:var(--green)" onclick="markSRDone('+sr.id+')">Done</button>'
+            +'</div>')
+          +'</div></div>';
       });
       h+='</div></div>';
     });
@@ -1949,6 +1972,9 @@ var srCalDay=null;
 var srDeletePending=null;
 var srPieceDeletePending=null;
 var srClearDonePending=false;
+var srSelectMode=false;
+var srSelected=[];
+var srBatchDeletePending=false;
 var secDeletePending=null;
 var ssDeletePending=null;
 var pieceDeletePending=null;
@@ -1979,6 +2005,27 @@ function clearSRDone(){
     srClearDonePending=true; render();
     setTimeout(function(){if(srClearDonePending){srClearDonePending=false;render();}},3000);
   }
+}
+function toggleSRSelectMode(){
+  srSelectMode=!srSelectMode; srSelected=[]; srBatchDeletePending=false; render();
+}
+function toggleSREntry(id){
+  var idx=srSelected.indexOf(id);
+  if(idx>=0) srSelected.splice(idx,1); else srSelected.push(id);
+  srBatchDeletePending=false; render();
+}
+function batchDeleteSR(){
+  if(srBatchDeletePending){
+    srList=srList.filter(function(x){return srSelected.indexOf(x.id)<0;});
+    srSelected=[]; srBatchDeletePending=false; srSelectMode=false; persist(); render();
+  } else {
+    srBatchDeletePending=true; render();
+    setTimeout(function(){if(srBatchDeletePending){srBatchDeletePending=false;render();}},3000);
+  }
+}
+function markSRDone(id){
+  var sr=srList.find(function(x){return x.id===id;}); if(!sr) return;
+  sr.done=true; persist(); render(); showToast('Marked as done \u2713');
 }
 function setSRCalDay(d){
   srCalDay=d;
